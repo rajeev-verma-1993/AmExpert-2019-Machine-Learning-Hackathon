@@ -1,0 +1,35 @@
+def merge_data(data):
+    
+    data_unmerged = data.copy()
+    
+    #merge data to campaign Data many to 1 on campaign_id key (left join)
+    campaign_data_merge = pd.merge(data,campaign_data,on='campaign_id',how='left')
+    #coupon to item_data (many to 1) on item_id key (left join) - call coupon item 
+    coupon_to_item = pd.merge(coupon_item_mapping,item_data,on='item_id',how='left')
+    
+    mode_fn = lambda x: pd.Series.mode(x)[0]
+
+    aggs= ['nunique',mode_fn]
+
+    coupon_to_item_agg = coupon_to_item.groupby(['coupon_id']).agg({'item_id':'count',
+                                                               'brand':aggs,
+                                                               'brand_type':aggs,
+                                                               'category':aggs}).reset_index()
+    
+    coupon_to_item_agg.columns = ['coupon_id','coupon_size','brand_nunique','brand_mode',
+                                 'brand_type_nunique','brand_type_mode',
+                                 'category_nunique','category_mode']
+    
+    #data to coupon item on coupon_id key (left join)
+    data = pd.merge(campaign_data_merge,coupon_to_item_agg,on='coupon_id',how='left')
+    #data to customer demographics on customer_id key (left join)
+    data = pd.merge(data,customer_demographics,on='customer_id',how='left')
+        
+    return data    
+
+
+
+train  =  merge_data(train)  
+print('Train Merge complete')  
+test  =  merge_data(test)  
+print('Test Merge complete')
